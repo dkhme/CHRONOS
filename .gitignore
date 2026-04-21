@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# C extensions
+*.so
+
+# C build artifacts
+*.o
+*.cmd
+*.d
+*.elf
+*.map
+*.bin
+*.out
+.ta.ld.d
+ta/out/
+
+# Virtual environments
+venv/
+env/
+
+# PyTorch/ML models
+*.pt
+*.pth
+
+# OS generated files
+.DS_Store
