@@ -9,10 +9,10 @@ This is the B1 baseline from Section 7 of the CHRONOS paper.
 
 Usage:
     # Server
-    python plaintext_baseline.py server --num-clients 20 --num-rounds 50
+    python plaintext_baseline.py server --num-clients 32 --num-rounds 50
 
     # Client (run on each device)
-    python plaintext_baseline.py client --client-id 0 --server 127.0.0.1:8080 \
+    python plaintext_baseline.py client --client-id 0 --server 127.0.0.1:9090 \
            --dataset cifar10 --model small_cnn
 """
 
@@ -131,16 +131,16 @@ def main():
     sub = parser.add_subparsers(dest="mode")
 
     sp = sub.add_parser("server")
-    sp.add_argument("--num-clients", type=int, default=20)
+    sp.add_argument("--num-clients", type=int, default=32)
     sp.add_argument("--num-rounds", type=int, default=50)
-    sp.add_argument("--port", type=int, default=8080)
+    sp.add_argument("--port", type=int, default=9090)
 
     cp = sub.add_parser("client")
     cp.add_argument("--client-id", type=int, required=True)
-    cp.add_argument("--server", type=str, default="127.0.0.1:8080")
+    cp.add_argument("--server", type=str, default="127.0.0.1:9090")
     cp.add_argument("--dataset", type=str, default="cifar10")
     cp.add_argument("--model", type=str, default="small_cnn")
-    cp.add_argument("--num-clients", type=int, default=20)
+    cp.add_argument("--num-clients", type=int, default=32)
     cp.add_argument("--alpha", type=float, default=0.5)
     cp.add_argument("--batch-size", type=int, default=32)
     cp.add_argument("--seed", type=int, default=42)

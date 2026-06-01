@@ -1,19 +1,19 @@
 #!/bin/bash
 # run_experiment.sh - CHRONOS Federation Orchestrator
 #
-# This script demonstrates how to launch a 20-client federation locally
+# This script demonstrates how to launch a 32-client federation locally
 # for 50 rounds of training across 5 random seeds to compute 95% CIs,
 # as described in Section 7 of the CHRONOS paper.
 #
-# Note: In the physical testbed, the clients were distributed across 20
-# physical Rock Pi 4 devices. This script simulates the orchestration
+# Note: In the physical testbed, the clients were distributed across 32
+# physical Rock Pi 4 and Orange Pi 5 devices. This script simulates the orchestration
 # locally for reproducibility.
 
 set -e
 
 mkdir -p logs
 
-NUM_CLIENTS=20
+NUM_CLIENTS=32
 ROUNDS=50
 DATASET="cifar10"
 MODEL="small_cnn"

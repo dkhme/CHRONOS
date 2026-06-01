@@ -20,8 +20,8 @@ Hardware: GCP c2-standard-8 (8 vCPUs, 32 GB RAM) in the paper's
 evaluation; any x86/ARM64 Linux machine suffices.
 
 Usage:
-    python fl_server.py --num-clients 20 --threshold 13 --rounds 50 \
-                        --port 8080 --seed 42
+    python fl_server.py --num-clients 32 --threshold 13 --rounds 50 \
+                        --port 9090 --seed 42
 """
 
 import argparse
@@ -257,7 +257,7 @@ class ChronosStrategy(fl.server.strategy.FedAvg):
       - FedAvg sample-count weighting and FP32 conversion.
     """
 
-    def __init__(self, num_clients: int = 20, threshold: int = 13,
+    def __init__(self, num_clients: int = 32, threshold: int = 13,
                  seed: int = 42, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_clients = num_clients
@@ -464,13 +464,13 @@ class ChronosStrategy(fl.server.strategy.FedAvg):
 def main():
     parser = argparse.ArgumentParser(
         description="CHRONOS Aggregation Server")
-    parser.add_argument("--num-clients", type=int, default=20,
+    parser.add_argument("--num-clients", type=int, default=32,
                         help="Total number of FL clients N")
     parser.add_argument("--threshold", type=int, default=13,
                         help="Shamir reconstruction threshold t")
     parser.add_argument("--rounds", type=int, default=50,
                         help="Number of federated training rounds")
-    parser.add_argument("--port", type=int, default=8080,
+    parser.add_argument("--port", type=int, default=9090,
                         help="Server port")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")

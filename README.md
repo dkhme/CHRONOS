@@ -38,11 +38,11 @@ To satisfy data availability and reproducibility requirements, this repository c
 ## Reproducing the Evaluation
 
 ### 1. Hardware Requirements
-* **Clients:** The physical testbed uses Rock Pi 4 Model B (RK3399 Cortex-A72) running OP-TEE 4.4.0. To execute the TA code locally, OP-TEE must be compiled with `CFG_WITH_VFP=y` and `CFG_CRYPTO_WITH_CE=y` for ARMv8 Crypto Extensions.
+* **Clients:** The physical testbed uses a heterogeneous mix of Rock Pi 4 Model B (RK3399) and Orange Pi 5 (RK3588S) devices running OP-TEE 4.4.0. To execute the TA code locally, OP-TEE must be compiled with `CFG_WITH_VFP=y` and `CFG_CRYPTO_WITH_CE=y` for ARMv8 Crypto Extensions.
 * **Server:** A standard x86/ARM64 Linux machine (e.g., GCP c2-standard-8) with Python 3.8+.
 
 ### 2. Running a Federation locally
-The `run_experiment.sh` script automates the orchestration of a 20-client federation over 50 rounds, repeated across 5 random seeds to calculate the 95% Confidence Intervals reported in the paper.
+The `run_experiment.sh` script automates the orchestration of a 32-client federation over 50 rounds, repeated across 5 random seeds to calculate the 95% Confidence Intervals reported in the paper.
 
 ```bash
 chmod +x run_experiment.sh
@@ -61,8 +61,8 @@ python3 evaluation/gradient_inversion.py
 Use `evaluation/metrics.py` to compute the PSNR/SSIM of the recovered dummy image. The expected PSNR against a CHRONOS-masked gradient should be ≈8 dB (random noise).
 
 ### 4. Generating the Scalability Plot
-To reproduce the $O(N)$ vs $O(N^2)$ active-phase latency chart (Figure 3) for cohort sizes up to $N=65$:
+To reproduce the $O(N)$ vs $O(N^2)$ active-phase latency chart (Figure 3) for cohort sizes up to $N=128$:
 ```bash
 python3 evaluation/scalability_sim.py
 ```
-This script outputs `scalability_simulation.png` and extrapolates the latency mathematically based on the physical N=20 Rock Pi 4 baseline.
+This script outputs `scalability_simulation.png` and extrapolates the latency mathematically based on the physical N=32 Rock Pi / Orange Pi baseline.

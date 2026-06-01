@@ -20,7 +20,7 @@
  *   (N-1) x 32 bytes  (DH secrets)
  *   + 4 bytes          (round counter)
  *   + 16 bytes         (AES-256-GCM tag for sealed blob)
- *   ≈ 632 bytes for N = 20
+ *   ≈ 1012 bytes for N = 32
  */
 
 #include <string.h>

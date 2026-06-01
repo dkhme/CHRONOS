@@ -16,7 +16,7 @@ seven-step fit() protocol described in Section 6.3 of the paper:
 Hardware target:  Rock Pi 4 / RK3399 running OP-TEE 4.4.0.
 
 Usage:
-    python fl_client.py --client-id 0 --server 192.168.1.100:8080 \
+    python fl_client.py --client-id 0 --server 192.168.1.100:9090 \
                         --dataset cifar10 --model small_cnn
 """
 
@@ -303,12 +303,12 @@ def build_client(args) -> ChronosClient:
 def main():
     parser = argparse.ArgumentParser(description="CHRONOS FL Client")
     parser.add_argument("--client-id", type=int, required=True)
-    parser.add_argument("--server", type=str, default="127.0.0.1:8080")
+    parser.add_argument("--server", type=str, default="127.0.0.1:9090")
     parser.add_argument("--dataset", type=str, default="cifar10",
                         choices=["cifar10", "femnist", "ucihar"])
     parser.add_argument("--model", type=str, default="small_cnn",
                         choices=list(MODEL_REGISTRY.keys()))
-    parser.add_argument("--num-clients", type=int, default=20)
+    parser.add_argument("--num-clients", type=int, default=32)
     parser.add_argument("--alpha", type=float, default=0.5,
                         help="Dirichlet concentration for non-IID split")
     parser.add_argument("--batch-size", type=int, default=32)

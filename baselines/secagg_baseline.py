@@ -13,10 +13,10 @@ direct comparison for isolating the effect of phase decoupling.
 
 Usage:
     # Server
-    python secagg_baseline.py server --num-clients 20 --num-rounds 50
+    python secagg_baseline.py server --num-clients 32 --num-rounds 50
 
     # Client
-    python secagg_baseline.py client --client-id 0 --server 127.0.0.1:8080 \
+    python secagg_baseline.py client --client-id 0 --server 127.0.0.1:9090 \
            --dataset cifar10 --model small_cnn
 """
 
@@ -113,7 +113,7 @@ class SecAggKeyManager:
 
         Returns a dict mapping peer_id → 16-byte PRG key.
         Each DH operation takes ≈9 ms on Rock Pi 4 (Curve25519),
-        so N-1 = 19 operations per round ≈ 170 ms of key exchange
+        so N-1 = 31 operations per round ≈ 280 ms of key exchange
         that must happen during the latency-critical active phase.
         """
         keys = {}
@@ -308,16 +308,16 @@ def main():
     sub = parser.add_subparsers(dest="mode")
 
     sp = sub.add_parser("server")
-    sp.add_argument("--num-clients", type=int, default=20)
+    sp.add_argument("--num-clients", type=int, default=32)
     sp.add_argument("--num-rounds", type=int, default=50)
-    sp.add_argument("--port", type=int, default=8080)
+    sp.add_argument("--port", type=int, default=9090)
 
     cp = sub.add_parser("client")
     cp.add_argument("--client-id", type=int, required=True)
-    cp.add_argument("--server", type=str, default="127.0.0.1:8080")
+    cp.add_argument("--server", type=str, default="127.0.0.1:9090")
     cp.add_argument("--dataset", type=str, default="cifar10")
     cp.add_argument("--model", type=str, default="small_cnn")
-    cp.add_argument("--num-clients", type=int, default=20)
+    cp.add_argument("--num-clients", type=int, default=32)
     cp.add_argument("--alpha", type=float, default=0.5)
     cp.add_argument("--batch-size", type=int, default=32)
     cp.add_argument("--seed", type=int, default=42)

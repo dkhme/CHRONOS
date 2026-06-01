@@ -15,8 +15,8 @@ the six-step protocol described in Section 6.2 of the CHRONOS paper:
 Hardware target:  Rock Pi 4 / RK3399 running OP-TEE 4.4.0.
 
 Usage:
-    python idle_daemon.py --client-id 0 --server 192.168.1.100:9090 \
-                          --num-clients 20 --threshold 13
+    python idle_daemon.py --client-id 0 --server 127.0.0.1:9090 \
+                          --num-clients 32 --threshold 13
 """
 
 import argparse
@@ -196,9 +196,9 @@ class IdlePhaseOrchestrator:
         Execute the full idle-phase protocol.
 
         Returns True on success, False on failure.
-        The total wall-clock time is dominated by N-1 = 19 Curve25519
-        DH operations (≈180 ms local) and one server relay round-trip,
-        totalling ≈250 ms on Rock Pi 4 hardware.
+        The total wall-clock time is dominated by N-1 = 31 Curve25519
+        DH operations (≈280 ms local) and one server relay round-trip,
+        totalling ≈350 ms on Rock Pi 4 / Orange Pi 5 hardware.
         """
         logger.info("Idle-phase starting for client %d (N=%d, t=%d)",
                      self.client_id, self.num_clients, self.threshold)
@@ -385,7 +385,7 @@ def main():
                         help="This client's index in [0, N-1]")
     parser.add_argument("--server", type=str, required=True,
                         help="Aggregation server address (host:port)")
-    parser.add_argument("--num-clients", type=int, default=20,
+    parser.add_argument("--num-clients", type=int, default=32,
                         help="Total number of clients N")
     parser.add_argument("--threshold", type=int, default=13,
                         help="Shamir reconstruction threshold t")

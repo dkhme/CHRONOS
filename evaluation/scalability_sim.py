@@ -2,8 +2,8 @@
 scalability_sim.py — Active-Phase Latency Scalability Simulation (RQ3).
 
 Mathematically models and plots the O(N) vs O(N^2) active-phase 
-latency scaling for CHRONOS vs. SecAgg up to N=65 clients, 
-extrapolating from the physical N=20 baseline on GCP c2-standard-8.
+latency scaling for CHRONOS vs. SecAgg up to N=128 clients, 
+extrapolating from the physical N=32 baseline on GCP c2-standard-8.
 """
 
 import numpy as np
@@ -73,9 +73,9 @@ def main():
     plt.savefig('scalability_simulation.png', dpi=300)
     print("Simulation complete. Plot saved to scalability_simulation.png")
     
-    print("\nExtrapolated values at N=65:")
-    print(f"CHRONOS: {simulate_chronos(65):.1f} ms")
-    print(f"SecAgg:  {simulate_secagg(65):.1f} ms")
+    print("\nExtrapolated values at N=128:")
+    print(f"CHRONOS: {simulate_chronos(128):.1f} ms")
+    print(f"SecAgg:  {simulate_secagg(128):.1f} ms")
 
 if __name__ == "__main__":
     main()
