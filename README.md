@@ -8,7 +8,7 @@ To satisfy data availability and reproducibility requirements, this repository c
 
 ```text
 .
-├── run_experiment.sh           # Main entry point to launch the 20-client federation
+├── run_experiment.sh           # Main entry point to launch the 32-client federation
 ├── ta/                         # OP-TEE Trusted Application (C)
 │   ├── include/
 │   │   └── chronos_ta.h        # TA UUID and command IDs
@@ -27,18 +27,23 @@ To satisfy data availability and reproducibility requirements, this repository c
 │   ├── secagg_baseline.py      # B2: Synchronous SecAgg
 │   ├── smpc_baseline.py        # B3: MP-SPDZ abstraction
 │   └── chronos_sw_baseline.py  # B4: Software-only CHRONOS ablation
+├── energy_profiling/           # Hardware Energy Measurement
+│   ├── ina226_logger.ino       # ESP32 bare-metal high-speed I2C logger
+│   └── sync_integration.py     # Rigorous trapezoidal integration of power logs
+├── network_emulation/          # Network Emulation
+│   └── emulate_wan.sh          # Linux tc netem wrapper for latency/loss emulation
 └── evaluation/                 # Datasets, Models, and Attack Scripts
     ├── models.py               # SmallCNN, MediumCNN, and HarCNN definitions
     ├── data_partition.py       # Dirichlet non-IID splits for CIFAR-10, FEMNIST, UCI-HAR
     ├── gradient_inversion.py   # Geiping optimization-based attack (RQ6)
     ├── metrics.py              # PSNR, SSIM, and 95% CI computation utilities
-    └── scalability_sim.py      # O(N) vs O(N^2) latency simulation for N > 20 (RQ3)
+    └── scalability_sim.py      # O(N) vs O(N^2) latency simulation for N > 32 (RQ3)
 ```
 
 ## Reproducing the Evaluation
 
 ### 1. Hardware Requirements
-* **Clients:** The physical testbed uses a heterogeneous mix of Rock Pi 4 Model B (RK3399) and Orange Pi 5 (RK3588S) devices running OP-TEE 4.4.0. To execute the TA code locally, OP-TEE must be compiled with `CFG_WITH_VFP=y` and `CFG_CRYPTO_WITH_CE=y` for ARMv8 Crypto Extensions.
+* **Clients:** The physical testbed uses a heterogeneous mix of 20 Rock Pi 4 Model B (RK3399) and 12 Orange Pi 5 (RK3588S) devices running OP-TEE 4.4.0. To execute the TA code locally, OP-TEE must be compiled with `CFG_WITH_VFP=y` and `CFG_CRYPTO_WITH_CE=y` for ARMv8 Crypto Extensions.
 * **Server:** A standard x86/ARM64 Linux machine (e.g., GCP c2-standard-8) with Python 3.8+.
 
 ### 2. Running a Federation locally
@@ -51,7 +56,7 @@ chmod +x run_experiment.sh
 This script handles:
 1. Spawning the Flower server.
 2. Invoking `host/idle_daemon.py` to perform the simulated TEE Diffie-Hellman key exchange and Shamir secret sharing.
-3. Launching 20 instances of `host/fl_client.py` for the active-phase training.
+3. Launching 32 instances of `host/fl_client.py` for the active-phase training.
 
 ### 3. Running the Gradient Inversion Attack
 To verify the visual privacy guarantees against the Geiping et al. attack (RQ6):
