@@ -51,6 +51,26 @@ LOCAL_EPOCHS  = 5
 LEARNING_RATE = 0.01
 MPSPDZ_HOME   = os.environ.get("MPSPDZ_HOME", "/opt/MP-SPDZ")
 
+class GPIOSync:
+    """Helper to toggle Rock Pi 4 GPIO for energy measurement bracketing."""
+    def __init__(self, pin: int = 4):
+        self.pin = pin
+        self.val_path = f"/sys/class/gpio/gpio{pin}/value"
+
+    def set_high(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("1\n")
+        except IOError:
+            pass
+
+    def set_low(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("0\n")
+        except IOError:
+            pass
+
 
 # ---------------------------------------------------------------------------
 #  MP-SPDZ Integration
@@ -231,6 +251,9 @@ class SMPCClient(fl.client.NumPyClient):
     def fit(self, parameters: List[np.ndarray],
             config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
 
+        gpio = GPIOSync(4)
+        gpio.set_high()
+
         self.set_parameters(parameters)
         self.model.train()
         optimizer = optim.SGD(self.model.parameters(), lr=LEARNING_RATE)
@@ -247,6 +270,7 @@ class SMPCClient(fl.client.NumPyClient):
         elapsed = (time.monotonic() - t0) * 1000
         logger.info("SMPC client %d: local training %.1f ms", self.client_id, elapsed)
 
+        gpio.set_low()
         # Return plaintext gradient — MPC handles the privacy on the server
         return self.get_parameters({}), len(self.train_loader.dataset), {}
 

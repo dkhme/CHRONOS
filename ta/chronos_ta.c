@@ -652,6 +652,12 @@ static TEE_Result cmd_generate_mask(uint32_t param_types, TEE_Param params[4])
             TEE_CipherUpdate(ctr_op, zero_block, sizeof(zero_block),
                              &raw, &out_len);
 
+            /* CHRONOS_FIELD_PRIME is 2^31 - 1 (Mersenne prime).
+             * Masking the highest bit optimally drops the rejection rate
+             * from ~50% to 1/(2^31), effectively halving keystream volume.
+             */
+            raw &= 0x7FFFFFFFU;
+
             if (raw < CHRONOS_FIELD_PRIME) {
                 /*
                  * Pairwise cancellation (Equation 2 of the paper):

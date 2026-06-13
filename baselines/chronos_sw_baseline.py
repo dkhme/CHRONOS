@@ -25,14 +25,13 @@ Usage:
 import argparse
 import hashlib
 import hmac
-import json
 import logging
 import os
 import struct
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import flwr as fl
 import numpy as np
@@ -51,6 +50,26 @@ FIELD_PRIME    = (1 << 31) - 1
 SCALING_FACTOR = 1 << 16
 LOCAL_EPOCHS   = 5
 LEARNING_RATE  = 0.01
+
+class GPIOSync:
+    """Helper to toggle Rock Pi 4 GPIO for energy measurement bracketing."""
+    def __init__(self, pin: int = 4):
+        self.pin = pin
+        self.val_path = f"/sys/class/gpio/gpio{pin}/value"
+
+    def set_high(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("1\n")
+        except IOError:
+            pass
+
+    def set_low(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("0\n")
+        except IOError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +208,10 @@ class ChronosSWClient(fl.client.NumPyClient):
             config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
 
         current_round = config.get("server_round", 1)
+        
+        gpio = GPIOSync(4)
+        gpio.set_high()
+        
         self.set_parameters(parameters)
         self.model.train()
         optimizer = optim.SGD(self.model.parameters(), lr=LEARNING_RATE)
@@ -225,6 +248,7 @@ class ChronosSWClient(fl.client.NumPyClient):
         logger.info("CHRONOS-SW client %d round %d: D=%d, mask=%.1fms, total=%.1fms",
                      self.client_id, current_round, D, mask_ms, total_ms)
 
+        gpio.set_low()
         return [masked.astype(np.float64)], len(self.train_loader.dataset), {
             "mask_ms": mask_ms,
         }

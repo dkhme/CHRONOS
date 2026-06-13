@@ -49,6 +49,26 @@ SCALING_FACTOR = 1 << 16
 LOCAL_EPOCHS   = 5
 LEARNING_RATE  = 0.01
 
+class GPIOSync:
+    """Helper to toggle Rock Pi 4 GPIO for energy measurement bracketing."""
+    def __init__(self, pin: int = 4):
+        self.pin = pin
+        self.val_path = f"/sys/class/gpio/gpio{pin}/value"
+
+    def set_high(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("1\n")
+        except IOError:
+            pass
+
+    def set_low(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("0\n")
+        except IOError:
+            pass
+
 
 # ---------------------------------------------------------------------------
 #  Software-only PRG masking (same primitive as CHRONOS, no TEE)
@@ -182,6 +202,10 @@ class SecAggClient(fl.client.NumPyClient):
             config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
 
         current_round = config.get("server_round", 1)
+        
+        gpio = GPIOSync(4)
+        gpio.set_high()
+
         self.set_parameters(parameters)
         self.model.train()
         optimizer = optim.SGD(self.model.parameters(), lr=LEARNING_RATE)
@@ -221,6 +245,7 @@ class SecAggClient(fl.client.NumPyClient):
         logger.info("SecAgg client %d round %d: D=%d, keyx=%.1fms, total=%.1fms",
                      self.client_id, current_round, D, keyx_ms, total_ms)
 
+        gpio.set_low()
         return [masked.astype(np.float64)], len(self.train_loader.dataset), {
             "keyx_ms": keyx_ms,
         }

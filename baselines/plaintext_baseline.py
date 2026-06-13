@@ -20,6 +20,7 @@ import argparse
 import logging
 import sys
 import time
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -38,6 +39,26 @@ logger = logging.getLogger("chronos.baseline.plaintext")
 
 LOCAL_EPOCHS  = 5
 LEARNING_RATE = 0.01
+
+class GPIOSync:
+    """Helper to toggle Rock Pi 4 GPIO for energy measurement bracketing."""
+    def __init__(self, pin: int = 4):
+        self.pin = pin
+        self.val_path = f"/sys/class/gpio/gpio{pin}/value"
+
+    def set_high(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("1\n")
+        except IOError:
+            pass
+
+    def set_low(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("0\n")
+        except IOError:
+            pass
 
 
 class PlaintextClient(fl.client.NumPyClient):
@@ -62,6 +83,9 @@ class PlaintextClient(fl.client.NumPyClient):
     def fit(self, parameters: List[np.ndarray],
             config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
 
+        gpio = GPIOSync(4)
+        gpio.set_high()
+
         self.set_parameters(parameters)
         self.model.train()
         optimizer = optim.SGD(self.model.parameters(), lr=LEARNING_RATE)
@@ -79,6 +103,7 @@ class PlaintextClient(fl.client.NumPyClient):
         logger.info("Client %d round %d: trained in %.1f ms",
                      self.client_id, config.get("server_round", 0), elapsed)
 
+        gpio.set_low()
         return self.get_parameters({}), len(self.train_loader.dataset), {}
 
     def evaluate(self, parameters: List[np.ndarray],

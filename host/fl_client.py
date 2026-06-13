@@ -25,6 +25,7 @@ import ctypes
 import logging
 import sys
 import time
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -41,6 +42,26 @@ from models import SmallCNN, MediumCNN, HarCNN
 from data_partition import load_client_data
 
 logger = logging.getLogger("chronos.client")
+
+class GPIOSync:
+    """Helper to toggle Rock Pi 4 GPIO for energy measurement bracketing."""
+    def __init__(self, pin: int = 4):
+        self.pin = pin
+        self.val_path = f"/sys/class/gpio/gpio{pin}/value"
+
+    def set_high(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("1\n")
+        except IOError:
+            pass
+
+    def set_low(self):
+        try:
+            with open(self.val_path, "w") as f:
+                f.write("0\n")
+        except IOError:
+            pass
 
 # ---------------------------------------------------------------------------
 #  Constants (match the paper and chronos_ta.h)
@@ -175,6 +196,9 @@ class ChronosClient(fl.client.NumPyClient):
           7. Return masked gradient.
         """
         current_round = config.get("server_round", 1)
+        
+        gpio = GPIOSync(4)
+        gpio.set_high()
         t0 = time.monotonic()
 
         # Step 1: Confirm key establishment via PEEK_COUNTER
@@ -182,6 +206,7 @@ class ChronosClient(fl.client.NumPyClient):
             self.tee.peek_counter()
         except RuntimeError as e:
             logger.error("Round %d: PEEK_COUNTER failed: %s", current_round, e)
+            gpio.set_low()
             raise fl.common.DropoutException(str(e))
 
         # Step 2: Local training for E epochs
@@ -217,6 +242,7 @@ class ChronosClient(fl.client.NumPyClient):
             logger.error("Round %d: TEE mask generation failed: %s",
                           current_round, e)
             # Drop out of this round rather than send unprotected gradient
+            gpio.set_low()
             raise fl.common.DropoutException(str(e))
 
         # Step 6: Apply mask in F_p
@@ -228,6 +254,7 @@ class ChronosClient(fl.client.NumPyClient):
 
         # Step 7: Return masked gradient as a single flat array
         # The server will sum these modulo p and dequantize.
+        gpio.set_low()
         return [masked.astype(np.float64)], len(self.dataloader.dataset), {
             "client_id": self.client_id,
         }

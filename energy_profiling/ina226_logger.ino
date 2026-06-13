@@ -6,7 +6,7 @@
  * Target: ESP32 or similar fast microcontroller.
  * Polls the INA226 power monitor at ~900Hz via 400kHz I2C.
  * Uses a hardware interrupt on SYNC_PIN to precisely bound the active 
- * TrustZone phase (triggered by Rock Pi 4 GPIO).
+ * active-phase boundary (triggered by Rock Pi 4 GPIO).
  */
 
 #define INA226_ADDRESS 0x40
@@ -14,7 +14,7 @@
 #define INA226_REG_SHUNTVOLTAGE 0x01
 #define INA226_REG_BUSVOLTAGE 0x02
 
-// Sync pin connected to Rock Pi 4 GPIO for TrustZone boundary tracking
+// Sync pin connected to Rock Pi 4 GPIO for active-phase boundary tracking
 #define SYNC_PIN 15
 
 volatile bool is_active = false;
@@ -41,8 +41,8 @@ void setup() {
 
     /* 
      * Configure INA226 for fast conversion:
-     * Avg = 1, VBUS CT = 588us, VSH CT = 588us, Mode = Shunt and Bus Continuous
-     * Register map: 0100 (Avg=1) | 100 (588us) | 100 (588us) | 111 (Cont) -> 0x4247
+     * Avg = 1, VBUS CT = 204us, VSH CT = 140us, Mode = Shunt and Bus Continuous
+     * Register map: 0100 (Avg=1) | 010 (204us) | 001 (140us) | 111 (Cont) -> 0x4247
      */
     Wire.beginTransmission(INA226_ADDRESS);
     Wire.write(INA226_REG_CONFIG);

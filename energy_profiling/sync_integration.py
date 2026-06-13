@@ -2,7 +2,7 @@
 """
 CHRONOS Trapezoidal Integration Script
 Parses high-frequency serial logs from the INA226 hardware monitor and integrates
-the instantaneous power over the exact TrustZone active-phase boundary.
+the instantaneous power over the exact active-phase boundary.
 """
 
 import sys
