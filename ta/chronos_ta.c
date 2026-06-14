@@ -638,7 +638,11 @@ static TEE_Result cmd_generate_mask(uint32_t param_types, TEE_Param params[4])
 
         TEE_SetOperationKey(ctr_op, key_handle);
 
-        /* IV = round index r (little-endian in first 4 bytes, rest zero) */
+        /* IV layout (paper Sec. 4): the round index r occupies the leading
+         * bytes as the per-round nonce; the low-order bytes act as the
+         * AES-CTR block counter, incremented once per 16-byte block. With
+         * D < 2^32 blocks the counter never overflows into the nonce, so
+         * each round produces an independent keystream. */
         uint8_t iv[16] = {0};
         memcpy(iv, &requested_round, sizeof(requested_round));
         TEE_CipherInit(ctr_op, iv, sizeof(iv));

@@ -203,8 +203,11 @@ class SecAggClient(fl.client.NumPyClient):
 
         current_round = config.get("server_round", 1)
         
+        # Energy bracketing: clear the previous round's active-phase window;
+        # local training below runs with the pin LOW (excluded from the
+        # active phase).
         gpio = GPIOSync(4)
-        gpio.set_high()
+        gpio.set_low()
 
         self.set_parameters(parameters)
         self.model.train()
@@ -233,6 +236,12 @@ class SecAggClient(fl.client.NumPyClient):
         quantized = (scaled + (FIELD_PRIME // 2)) % FIELD_PRIME
         D = len(quantized)
 
+        # --- Active phase begins: local gradient computation is complete.
+        # For SecAgg the synchronous key agreement is part of the active phase,
+        # so the pin goes HIGH here and stays HIGH across the multi-round
+        # exchange and transmission until the next global model arrives.
+        gpio.set_high()
+
         # Synchronous key exchange + mask generation (active-phase cost)
         t_keyx = time.monotonic()
         mask = self.key_mgr.compute_mask(current_round, D)
@@ -245,7 +254,8 @@ class SecAggClient(fl.client.NumPyClient):
         logger.info("SecAgg client %d round %d: D=%d, keyx=%.1fms, total=%.1fms",
                      self.client_id, current_round, D, keyx_ms, total_ms)
 
-        gpio.set_low()
+        # Pin remains HIGH after return: the active-phase window includes
+        # transmission and the wait for the aggregated model, cleared next round.
         return [masked.astype(np.float64)], len(self.train_loader.dataset), {
             "keyx_ms": keyx_ms,
         }

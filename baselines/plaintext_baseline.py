@@ -83,8 +83,11 @@ class PlaintextClient(fl.client.NumPyClient):
     def fit(self, parameters: List[np.ndarray],
             config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
 
+        # Energy bracketing: clear the previous round's active-phase window
+        # (the new global model has just been received). Local training below
+        # runs with the pin LOW and is excluded from the active phase.
         gpio = GPIOSync(4)
-        gpio.set_high()
+        gpio.set_low()
 
         self.set_parameters(parameters)
         self.model.train()
@@ -103,7 +106,10 @@ class PlaintextClient(fl.client.NumPyClient):
         logger.info("Client %d round %d: trained in %.1f ms",
                      self.client_id, config.get("server_round", 0), elapsed)
 
-        gpio.set_low()
+        # Active phase begins: local gradient computation is complete. B1 has
+        # no masking, so its active phase is the plaintext transmission; the pin
+        # stays HIGH across the network round-trip and is cleared next round.
+        gpio.set_high()
         return self.get_parameters({}), len(self.train_loader.dataset), {}
 
     def evaluate(self, parameters: List[np.ndarray],

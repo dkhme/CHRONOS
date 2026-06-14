@@ -69,6 +69,7 @@ class GPIOSync:
 
 FIELD_PRIME    = (1 << 31) - 1          # p = 2^31 - 1 (Mersenne prime)
 SCALING_FACTOR = 1 << 16                # S = 2^16
+GRAD_CLIP_BOUND = 1000.0                # max|g|_inf safeguard (Section 6)
 LOCAL_EPOCHS   = 5                      # E = 5 local epochs per round
 LEARNING_RATE  = 0.01                   # η = 0.01
 
@@ -130,14 +131,16 @@ def quantize_to_field(fp32_vector: np.ndarray) -> np.ndarray:
     Quantize FP32 gradients into F_p.
 
     Steps (Section 6.3, Step 4):
-      1. Scale by S = 2^16 and round to nearest integer.
-      2. Shift to positive domain [0, p-1] by adding p//2.
-      3. Clip to valid range (empirically max|g|_inf < 2^10).
+      1. Clip to the empirically verified range |g|_inf < 1000 (Section 6)
+         so that N * S * max|g|_inf stays below p and cannot alias.
+      2. Scale by S = 2^16 and round to nearest integer.
+      3. Shift to positive domain [0, p-1] by adding p//2.
 
     The constant domain shift is deterministically subtracted by the
     server during de-aggregation.
     """
-    scaled = np.round(fp32_vector * SCALING_FACTOR).astype(np.int64)
+    clipped = np.clip(fp32_vector, -GRAD_CLIP_BOUND, GRAD_CLIP_BOUND)
+    scaled = np.round(clipped * SCALING_FACTOR).astype(np.int64)
     shifted = (scaled + (FIELD_PRIME // 2)) % FIELD_PRIME
     return shifted
 
@@ -197,16 +200,18 @@ class ChronosClient(fl.client.NumPyClient):
         """
         current_round = config.get("server_round", 1)
         
+        # Energy bracketing: clear the previous round's active-phase window
+        # (reaching fit() means this round's global model has just been
+        # received). Local training below runs with the pin LOW and is
+        # therefore excluded from the active-phase energy integration.
         gpio = GPIOSync(4)
-        gpio.set_high()
-        t0 = time.monotonic()
+        gpio.set_low()
 
         # Step 1: Confirm key establishment via PEEK_COUNTER
         try:
             self.tee.peek_counter()
         except RuntimeError as e:
             logger.error("Round %d: PEEK_COUNTER failed: %s", current_round, e)
-            gpio.set_low()
             raise fl.common.DropoutException(str(e))
 
         # Step 2: Local training for E epochs
@@ -234,6 +239,13 @@ class ChronosClient(fl.client.NumPyClient):
         quantized = quantize_to_field(flat_grad)
         D = len(quantized)
 
+        # --- Active phase begins: local gradient computation is complete and
+        # cryptographic masking starts here. The pin stays HIGH through masking
+        # and the subsequent network round-trip, and is cleared at the top of
+        # the next round when the aggregated global model is received.
+        gpio.set_high()
+        t0 = time.monotonic()
+
         # Step 5: TEE mask generation (single context switch)
         try:
             tee_mask = self.tee.generate_mask(round_id=current_round,
@@ -249,12 +261,12 @@ class ChronosClient(fl.client.NumPyClient):
         masked = (quantized + tee_mask) % FIELD_PRIME
 
         elapsed_ms = (time.monotonic() - t0) * 1000
-        logger.info("Round %d: D=%d, mask applied in %.1f ms",
+        logger.info("Round %d: D=%d, masking done in %.1f ms (active phase continues over transmit)",
                      current_round, D, elapsed_ms)
 
-        # Step 7: Return masked gradient as a single flat array
-        # The server will sum these modulo p and dequantize.
-        gpio.set_low()
+        # Step 7: Return masked gradient. The GPIO pin remains HIGH after return
+        # so the energy window spans transmission and the wait for the
+        # aggregated global model; it is cleared at the top of the next round.
         return [masked.astype(np.float64)], len(self.dataloader.dataset), {
             "client_id": self.client_id,
         }
@@ -342,20 +354,6 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--tee-lib", type=str, default="./libchronos_tee.so")
-    args = parser.parse_args()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-    )
-
-    client = build_client(args)
-    fl.client.start_numpy_client(server_address=args.server, client=client)
-
-
-if __name__ == "__main__":
-    main()
-.add_argument("--tee-lib", type=str, default="./libchronos_tee.so")
     args = parser.parse_args()
 
     logging.basicConfig(

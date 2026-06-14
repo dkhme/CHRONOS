@@ -209,8 +209,10 @@ class ChronosSWClient(fl.client.NumPyClient):
 
         current_round = config.get("server_round", 1)
         
+        # Energy bracketing: clear the previous round's active-phase window;
+        # training below runs with the pin LOW (excluded from the active phase).
         gpio = GPIOSync(4)
-        gpio.set_high()
+        gpio.set_low()
         
         self.set_parameters(parameters)
         self.model.train()
@@ -237,6 +239,11 @@ class ChronosSWClient(fl.client.NumPyClient):
         quantized = (scaled + (FIELD_PRIME // 2)) % FIELD_PRIME
         D = len(quantized)
 
+        # --- Active phase begins: local gradient computation is complete; the
+        # pin goes HIGH for software masking and stays HIGH across transmission
+        # until the next global model arrives.
+        gpio.set_high()
+
         # Software mask generation (no TEE context switch, no RPMB)
         t_mask = time.monotonic()
         mask = self.key_store.generate_mask(current_round, D)
@@ -248,7 +255,8 @@ class ChronosSWClient(fl.client.NumPyClient):
         logger.info("CHRONOS-SW client %d round %d: D=%d, mask=%.1fms, total=%.1fms",
                      self.client_id, current_round, D, mask_ms, total_ms)
 
-        gpio.set_low()
+        # Pin remains HIGH after return (transmission + wait for global model);
+        # cleared at the top of the next round.
         return [masked.astype(np.float64)], len(self.train_loader.dataset), {
             "mask_ms": mask_ms,
         }

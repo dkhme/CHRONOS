@@ -251,8 +251,10 @@ class SMPCClient(fl.client.NumPyClient):
     def fit(self, parameters: List[np.ndarray],
             config: Dict) -> Tuple[List[np.ndarray], int, Dict]:
 
+        # Energy bracketing: clear the previous round's active-phase window;
+        # training below runs with the pin LOW (excluded from the active phase).
         gpio = GPIOSync(4)
-        gpio.set_high()
+        gpio.set_low()
 
         self.set_parameters(parameters)
         self.model.train()
@@ -270,7 +272,9 @@ class SMPCClient(fl.client.NumPyClient):
         elapsed = (time.monotonic() - t0) * 1000
         logger.info("SMPC client %d: local training %.1f ms", self.client_id, elapsed)
 
-        gpio.set_low()
+        # Active phase begins: local gradient computation is complete; the pin
+        # stays HIGH across the interactive MPC round-trip, cleared next round.
+        gpio.set_high()
         # Return plaintext gradient — MPC handles the privacy on the server
         return self.get_parameters({}), len(self.train_loader.dataset), {}
 
